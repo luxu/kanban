@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="{{ csrf_token }}">
+    <title>Kanban Board</title>
+    <style>
+        .kanban-board {
+            display: flex;
+            gap: 20px;
+        }
+        .phase {
+            border: 1px solid #ccc;
+            padding: 10px;
+            width: 200px;
+            min-height: 300px;
+        }
+        .card {
+            border: 1px solid #333;
+            padding: 10px;
+            margin-bottom: 10px;
+            background-color: #f9f9f9;
+            cursor: move;
+        }
+    </style>
+</head>
+<body>
+    <h1>Kanban Board</h1>
+    <button onclick="createPhase()">Adicionar Fases</button>
+    <button onclick="createCard()">Adicionar Cards</button>
+
+    <div class="kanban-board" id="kanban-board"></div>
+
+    <script>
+        const API_BASE = 'http://127.0.0.1:8000/api/';
+        let phases = [];
+
+        // Obter o token CSRF da meta tag
+        function getCSRFToken() {
+            return document.querySelector('meta[name="csrf-token"]').content;
+        }
+
+        // Headers para requisições com CSRF
+        const headers = {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCSRFToken(),
+        };
+
+        async function fetchPhases() {
+            const response = await fetch(`${API_BASE}phases/`);
+            phases = await response.json();
+            renderBoard();
+        }
+
+        function renderBoard() {
+            const board = document.getElementById('kanban-board');
+            board.innerHTML = '';
+            phases.forEach(phase => {
+                const phaseDiv = document.createElement('div');
+                phaseDiv.className = 'phase';
+                phaseDiv.innerHTML = `<h3>${phase.name}</h3>`;
+                phase.cards.forEach(card => {
+                    const cardDiv = document.createElement('div');
+                    cardDiv.className = 'card';
+                    cardDiv.textContent = card.title;
+                    cardDiv.draggable = true;
+
+                    cardDiv.ondragstart = (e) => {
+                        e.dataTransfer.setData('card-id', card.id);
+                    };
+
+                    phaseDiv.appendChild(cardDiv);
+                });
+                phaseDiv.ondragover = (e) => e.preventDefault();
+                phaseDiv.ondrop = (e) => {
+                    const cardId = e.dataTransfer.getData('card-id');
+                    moveCard(cardId, phase.id);
+                };
+                board.appendChild(phaseDiv);
+            });
+        }
+
+        async function createPhase() {
+            const name = prompt('Enter phase name:');
+            if (name) {
+                await fetch(`${API_BASE}phases/`, {
+                    method: 'POST',
+                    headers,
+                    body: JSON.stringify({ name }),
+                });
+                fetchPhases();
+            }
+        }
+
+        async function createCard() {
+            const title = prompt('Enter card title:');
+            const phaseId = phases[0]?.id;
+            if (title && phaseId) {
+                try {
+                    await fetch(`${API_BASE}cards/`, {
+                        method: 'POST',
+                        headers,
+                        body: JSON.stringify({ title, phase: phaseId }),
+                    });
+                    fetchPhases();
+                } catch (error) {
+                    console.error(error);
+                }
+            } else {
+                alert('Please create a phase first.');
+            }
+        }
+
+        async function moveCard(cardId, phaseId) {
+            const card = phases.flatMap(p => p.cards).find(c => c.id == cardId);
+            if (card) {
+                await fetch(`${API_BASE}cards/${cardId}/`, {
+                    method: 'PATCH',
+                    headers,
+                    body: JSON.stringify({ phase: phaseId }),
+                });
+                fetchPhases();
+            }
+        }
+        fetchPhases();
+    </script>
+</body>
+</html>

@@ -1,0 +1,25 @@
+[project]
+name = "kanban"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "django-extensions>=3.2.3",
+    "django>=5.1.4",
+    "djangorestframework>=3.15.2",
+    "ipython>=8.31.0",
+    "pytest>=8.3.4",
+    "pytest-django>=4.9.0",
+    "python-decouple>=3.8",
+    "taskipy>=1.14.1",
+    "ruff>=0.8.4",
+]
+[tool.taskipy.tasks]
+makemigrations = "uv run python manage.py makemigrations"
+migrate = "uv run python manage.py migrate"
+createsuperuser = "uv run python manage.py createsuperuser"
+runserver = "uv run python manage.py runserver"
+shell_plus = "uv run python manage.py shell_plus"
+showmigrations = "uv run python manage.py showmigrations"
+lint = "ruff check"
